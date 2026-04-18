@@ -3,15 +3,20 @@
 ## Overview
 
 ```
-Alexa (Smart Home Skill) → Lambda → Backend Server (HTTP API + WebSocket)
-                                              ↓
-                                    PC Agent (WebSocket client)
-                                              ↓
-                                   System commands (shutdown / reboot)
+                    ┌─ Option A ──────────────────────────────┐
+Alexa (Smart Home)  │  AWS Lambda                             │
+                    └─ Option B ──────────────────────────────┘
+                         │  Docker HTTP server (port 3001)
+                         ▼
+               Backend Server (HTTP API + WebSocket, port 3000)
+                         ↓
+               PC Agent (WebSocket client)
+                         ↓
+              System commands (shutdown / reboot)
 
-Alexa Echo device ─────────────── WoL Magic Packet (UDP) ──→ PC NIC
-   (on same LAN)                  (sent automatically when TurnOn is invoked,
-                                   using the MAC address from Alexa.WakeOnLANController)
+Alexa Echo device ─── WoL Magic Packet (UDP) ──→ PC NIC
+   (on same LAN)      (sent automatically when TurnOn is invoked,
+                       using the MAC address from Alexa.WakeOnLANController)
 ```
 
 Wake-on-LAN packets are sent **directly by the Echo device** using the
@@ -85,14 +90,35 @@ needed in the backend.
 
 ### 3. Alexa Skill (`alexa-skill/`)
 
+The skill is a **Smart Home skill** (not a Custom Skill). This means:
+- No custom interaction model — Alexa's built-in phrases are used.
+- Directives are received as JSON events from the Alexa Smart Home API.
+
+Two deployment options share the same directive-handling logic:
+
+#### Option A – AWS Lambda (`alexa-skill/lambda/`)
+
 | Property | Value |
 |---|---|
 | Type | **Smart Home Skill** |
 | Runtime | AWS Lambda (Node.js 20) |
 
-The skill is a **Smart Home skill** (not a Custom Skill). This means:
-- No custom interaction model — Alexa's built-in phrases are used.
-- Directives are received as raw JSON events from the Alexa Smart Home API.
+Alexa invokes the Lambda function directly via the Alexa Smart Home service. The
+function URL is configured as the **Lambda ARN** in the Alexa Developer Console.
+
+#### Option B – Docker HTTP server (`alexa-skill/http-server/`)
+
+| Property | Value |
+|---|---|
+| Type | **Smart Home Skill** |
+| Runtime | Node.js 20 (Express, port 3001) |
+| Request verification | `ask-sdk-express-adapter` |
+
+A self-hosted Express server that handles Alexa Smart Home directives over HTTPS.
+The endpoint (`POST /skill`) is configured as an **HTTPS URL** in the Alexa Developer
+Console. `ask-sdk-express-adapter` verifies the Alexa request signature, certificate
+chain, and timestamp before any directive is processed. Included in
+`docker-compose.yml` as the `skill` service.
 
 **Declared capabilities per endpoint**
 

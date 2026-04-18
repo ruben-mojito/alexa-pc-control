@@ -21,11 +21,15 @@ Smart Home interface — no separate WoL service needed in your infrastructure.
 ## 🧱 Architecture
 
 ```
-Alexa (Smart Home) → Lambda → Backend Server (HTTP + WebSocket)
-                                         ↓
-                               PC Agent (WS client)
-                                         ↓
-                             System commands (shutdown/reboot)
+                 ┌─ Option A: AWS Lambda ──────────────────┐
+Alexa (Smart Home)                                         │
+                 └─ Option B: Docker HTTP server (3001) ───┘
+                                     ↓
+                      Backend Server (HTTP + WebSocket)
+                                     ↓
+                           PC Agent (WS client)
+                                     ↓
+                       System commands (shutdown/reboot)
 
 Echo device ── WoL Magic Packet (UDP) ──→ PC NIC
  (same LAN)      (sent automatically on TurnOn using the
