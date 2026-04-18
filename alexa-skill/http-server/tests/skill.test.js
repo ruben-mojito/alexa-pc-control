@@ -77,7 +77,7 @@ describe('Unknown route', () => {
 // ─── POST /skill – HTTP-level ─────────────────────────────────────────────────
 
 describe('POST /skill', () => {
-  it('returns 400 for a missing directive', async () => {
+  it('returns an error response for a missing directive', async () => {
     const res = await request(app).post('/skill').send({});
     expect(res.status).toBe(500);
     expect(res.body).toHaveProperty('error');
@@ -92,9 +92,7 @@ describe('POST /skill', () => {
   });
 
   it('returns a Discover.Response for a Discovery directive', async () => {
-    const body = makeDirective('Alexa.Discovery', 'Discover', {
-      header: { namespace: 'Alexa.Discovery', name: 'Discover' },
-    });
+    const body = makeDirective('Alexa.Discovery', 'Discover');
     const res = await request(app).post('/skill').send(body);
     expect(res.status).toBe(200);
     expect(res.body.event.header.namespace).toBe('Alexa.Discovery');
