@@ -1,0 +1,123 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "control pc",
+      "intents": [
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.FallbackIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NavigateHomeIntent",
+          "samples": []
+        },
+        {
+          "name": "ShutdownIntent",
+          "slots": [
+            {
+              "name": "deviceName",
+              "type": "AMAZON.SearchQuery"
+            },
+            {
+              "name": "delayMinutes",
+              "type": "AMAZON.NUMBER"
+            }
+          ],
+          "samples": [
+            "apaga {deviceName}",
+            "apaga {deviceName} en {delayMinutes} minutos",
+            "apaga el ordenador",
+            "apaga el PC",
+            "apaga mi ordenador",
+            "apaga mi PC",
+            "apagar {deviceName}",
+            "apagar el ordenador",
+            "apagar el PC"
+          ]
+        },
+        {
+          "name": "RebootIntent",
+          "slots": [
+            {
+              "name": "deviceName",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "reinicia {deviceName}",
+            "reinicia el ordenador",
+            "reinicia el PC",
+            "reinicia mi ordenador",
+            "reinicia mi PC",
+            "reiniciar {deviceName}",
+            "reiniciar el ordenador",
+            "reiniciar el PC"
+          ]
+        },
+        {
+          "name": "WakeIntent",
+          "slots": [
+            {
+              "name": "deviceName",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "enciende {deviceName}",
+            "enciende el ordenador",
+            "enciende el PC",
+            "enciende mi ordenador",
+            "enciende mi PC",
+            "encender {deviceName}",
+            "encender el ordenador",
+            "encender el PC",
+            "despierta {deviceName}",
+            "despierta el ordenador",
+            "despierta el PC"
+          ]
+        },
+        {
+          "name": "PingIntent",
+          "slots": [
+            {
+              "name": "deviceName",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "comprueba {deviceName}",
+            "está encendido {deviceName}",
+            "está encendido el ordenador",
+            "está online {deviceName}",
+            "está en línea {deviceName}",
+            "verificar {deviceName}"
+          ]
+        },
+        {
+          "name": "ListDevicesIntent",
+          "slots": [],
+          "samples": [
+            "listar dispositivos",
+            "listar mis ordenadores",
+            "qué dispositivos están conectados",
+            "mostrar mis dispositivos",
+            "qué dispositivos tengo"
+          ]
+        }
+      ],
+      "types": []
+    }
+  }
+}

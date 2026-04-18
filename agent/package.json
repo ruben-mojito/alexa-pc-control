@@ -1,0 +1,25 @@
+{
+  "name": "alexa-pc-control-agent",
+  "version": "1.0.0",
+  "description": "Alexa PC Control – PC agent (WebSocket client)",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "jest --forceExit --runInBand",
+    "lint": "eslint src/**/*.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "ws": "^8.17.1"
+  },
+  "devDependencies": {
+    "eslint": "^9.7.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}
