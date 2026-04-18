@@ -284,4 +284,4 @@ app.listen(PORT, () => {
   console.log(`[skill-http] Listening on port ${PORT}`);
 });
 
-module.exports = { app };
+module.exports = { app, smartHomeSkill };
