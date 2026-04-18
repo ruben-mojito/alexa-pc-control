@@ -9,24 +9,27 @@
 
 | Voice command | Effect |
 |---|---|
-| "Alexa, shut down my computer" | Shuts down the PC |
-| "Alexa, reboot my computer" | Reboots the PC |
-| "Alexa, wake up my PC" | Sends a WoL Magic Packet |
-| "Alexa, is my computer on?" | Pings the agent |
-| "Alexa, list my devices" | Lists connected PCs |
+| "Alexa, turn on My PC" | Sends a WoL Magic Packet via `Alexa.WakeOnLANController` |
+| "Alexa, turn off My PC" | Shuts down the PC via the backend + agent |
+
+Wake-on-LAN is handled **natively by your Echo device** using the
+[`Alexa.WakeOnLANController`](https://developer.amazon.com/en-US/docs/alexa/device-apis/alexa-wakeonlancontroller.html)
+Smart Home interface — no separate WoL service needed in your infrastructure.
 
 ---
 
 ## 🧱 Architecture
 
 ```
-Alexa → Skill → Lambda → Backend Server (HTTP + WebSocket)
-                                   ↓
-                         WoL Service (UDP broadcast)
-                                   ↓
-                           PC Agent (WS client)
-                                   ↓
-                         System commands (shutdown/reboot)
+Alexa (Smart Home) → Lambda → Backend Server (HTTP + WebSocket)
+                                         ↓
+                               PC Agent (WS client)
+                                         ↓
+                             System commands (shutdown/reboot)
+
+Echo device ── WoL Magic Packet (UDP) ──→ PC NIC
+ (same LAN)      (sent automatically on TurnOn using the
+                  MAC address from Alexa.WakeOnLANController)
 ```
 
 See [docs/architecture.md](docs/architecture.md) for full details.
@@ -39,8 +42,7 @@ See [docs/architecture.md](docs/architecture.md) for full details.
 alexa-pc-control/
 ├── server/           # Node.js backend (Express + WebSockets + JWT)
 ├── agent/            # Node.js PC agent (WebSocket client)
-├── wol-service/      # Node.js Wake-on-LAN HTTP service
-├── alexa-skill/      # Alexa interaction model + Lambda handler
+├── alexa-skill/      # Smart Home Skill manifest + Lambda handler
 ├── docs/             # Architecture and setup guides
 ├── docker-compose.yml
 ├── CONTRIBUTING.md
@@ -54,9 +56,8 @@ alexa-pc-control/
 ```bash
 # 1. Configure secrets
 cp server/.env.example server/.env      # set JWT_SECRET and API_KEY
-cp wol-service/.env.example wol-service/.env
 
-# 2. Start backend services
+# 2. Start the backend server
 docker-compose up -d
 
 # 3. Run the agent on the PC you want to control
@@ -81,27 +82,24 @@ Full setup instructions: [docs/setup.md](docs/setup.md)
 ## 🧪 Tests
 
 ```bash
-cd server      && npm install && npm test
-cd agent       && npm install && npm test
-cd wol-service && npm install && npm test
+cd server && npm install && npm test
+cd agent  && npm install && npm test
 ```
 
 ---
 
 ## 🗺️ Roadmap
 
-### MVP ✅
+### v1 ✅
 - [x] Backend with WebSockets
 - [x] Agent that executes shutdown/reboot
 - [x] `/api/commands/:deviceId` endpoint
 - [x] JWT authentication
-
-### v1
-- [ ] Wake-on-LAN integrated (service ready, Lambda wired)
-- [ ] Structured logging
-- [ ] Full Docker Compose
+- [x] Smart Home Skill with `Alexa.WakeOnLANController` (WoL via Echo, no extra service)
 
 ### v2
+- [ ] Multi-device support via Alexa app device discovery
+- [ ] Structured logging
 - [ ] Web dashboard (device management UI)
 - [ ] Custom scripts
 - [ ] Push notifications

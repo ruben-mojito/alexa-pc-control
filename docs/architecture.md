@@ -3,14 +3,20 @@
 ## Overview
 
 ```
-Alexa → Lambda Skill → Backend Server (HTTP API + WebSocket)
-                                  ↓
-                       WoL Service (UDP broadcast)
-                                  ↓
-                         PC Agent (WebSocket client)
-                                  ↓
-                        System commands (shutdown / reboot)
+Alexa (Smart Home Skill) → Lambda → Backend Server (HTTP API + WebSocket)
+                                              ↓
+                                    PC Agent (WebSocket client)
+                                              ↓
+                                   System commands (shutdown / reboot)
+
+Alexa Echo device ─────────────── WoL Magic Packet (UDP) ──→ PC NIC
+   (on same LAN)                  (sent automatically when TurnOn is invoked,
+                                   using the MAC address from Alexa.WakeOnLANController)
 ```
+
+Wake-on-LAN packets are sent **directly by the Echo device** using the
+`Alexa.WakeOnLANController` Smart Home interface — no separate WoL service is
+needed in the backend.
 
 ---
 
@@ -77,45 +83,48 @@ Alexa → Lambda Skill → Backend Server (HTTP API + WebSocket)
 
 ---
 
-### 3. WoL Service (`wol-service/`)
+### 3. Alexa Skill (`alexa-skill/`)
 
 | Property | Value |
 |---|---|
-| Runtime | Node.js 20 |
-| Protocol | UDP broadcast (Magic Packet) |
-| Network | Must run on the same LAN as the target PCs |
-
-**Responsibilities**
-
-* Receive an HTTP request with a MAC address.
-* Send a Wake-on-LAN Magic Packet via UDP broadcast.
-
-**Key endpoints**
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/health` | No | Health check |
-| POST | `/wake` | JWT | Send a WoL magic packet |
-
----
-
-### 4. Alexa Skill (`alexa-skill/`)
-
-| Property | Value |
-|---|---|
-| Type | Custom Skill |
-| Invocation | "PC Control" (en-US) / "Control PC" (es-ES) |
+| Type | **Smart Home Skill** |
 | Runtime | AWS Lambda (Node.js 20) |
 
-**Supported intents**
+The skill is a **Smart Home skill** (not a Custom Skill). This means:
+- No custom interaction model — Alexa's built-in phrases are used.
+- Directives are received as raw JSON events from the Alexa Smart Home API.
 
-| Intent | Example utterances |
-|---|---|
-| `ShutdownIntent` | "shut down my computer", "turn off my PC in 5 minutes" |
-| `RebootIntent` | "reboot my computer", "restart my PC" |
-| `WakeIntent` | "wake up my computer", "turn on my PC" |
-| `PingIntent` | "is my computer on?", "check my PC" |
-| `ListDevicesIntent` | "list my devices", "which devices are connected" |
+**Declared capabilities per endpoint**
+
+| Capability | Version | Purpose |
+|---|---|---|
+| `Alexa` | 3 | Base interface (required) |
+| `Alexa.PowerController` | 3 | TurnOn / TurnOff voice commands |
+| `Alexa.WakeOnLANController` | 3 | Tells the Echo the MAC address so it can send the WoL magic packet |
+
+**Directive handlers**
+
+| Namespace | Directive | Handler |
+|---|---|---|
+| `Alexa.Authorization` | `AcceptGrant` | Acknowledges account-linking grant |
+| `Alexa.Discovery` | `Discover` | Returns endpoint list with capabilities + MAC address |
+| `Alexa.PowerController` | `TurnOn` | Returns success; Echo sends WoL packet to the MAC |
+| `Alexa.PowerController` | `TurnOff` | Sends `shutdown` command to the agent via the backend |
+
+**Device configuration**
+
+Devices are configured via the `DEVICES` Lambda environment variable (JSON array):
+
+```json
+[
+  {
+    "deviceId": "my-pc",
+    "friendlyName": "My PC",
+    "macAddress": "AA:BB:CC:DD:EE:FF",
+    "description": "Gaming PC in the living room"
+  }
+]
+```
 
 ---
 
@@ -126,28 +135,33 @@ Alexa → Lambda Skill → Backend Server (HTTP API + WebSocket)
 * **Rate limiting** – 100 requests / 15 min per IP on all API routes.
 * **HTTPS** – use a reverse proxy (nginx / Caddy) with TLS in production.
 * **Command allowlist** – only `shutdown`, `reboot`, and `ping` are accepted.
+* **Account linking** – required by Alexa Smart Home skills; configure an OAuth 2.0 provider.
 
 ---
 
 ## Data flow
 
-### Shutdown
+### Wake-on-LAN (TurnOn)
 
 ```
-1. User: "Alexa, shut down my computer"
-2. Alexa → Lambda: ShutdownIntent
+1. User: "Alexa, turn on my PC"
+2. Alexa Smart Home → Lambda: Alexa.PowerController/TurnOn
+3. Lambda → returns Alexa.Response (success)
+4. Echo device (on same LAN) → UDP Magic Packet → PC NIC
+5. PC wakes up
+```
+
+The WoL magic packet is sent by the **Echo device itself**, using the `macAddress`
+registered in the `Alexa.WakeOnLANController` capability during discovery.
+
+### Shutdown (TurnOff)
+
+```
+1. User: "Alexa, turn off my PC"
+2. Alexa Smart Home → Lambda: Alexa.PowerController/TurnOff
 3. Lambda → POST /api/auth/token  → JWT
 4. Lambda → POST /api/commands/my-pc { command: "shutdown" }
 5. Server → WebSocket → Agent
 6. Agent → execSync("shutdown -h now")
 ```
 
-### Wake-on-LAN
-
-```
-1. User: "Alexa, wake up my PC"
-2. Alexa → Lambda: WakeIntent
-3. Lambda → POST /api/auth/token  → JWT
-4. Lambda → POST /wake { mac: "AA:BB:CC:DD:EE:FF" }
-5. WoL Service → UDP broadcast (Magic Packet) → PC NIC
-```

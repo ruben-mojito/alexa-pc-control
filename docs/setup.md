@@ -5,6 +5,7 @@
 * Docker & Docker Compose (or Node.js 20+ for local development)
 * An Amazon Developer account (for the Alexa Skill)
 * AWS account with Lambda access
+* An Echo device on the same local network as your PC (required for WoL)
 
 ---
 
@@ -24,27 +25,46 @@ Copy the example files and fill in the values:
 ```bash
 cp server/.env.example server/.env
 cp agent/.env.example agent/.env
-cp wol-service/.env.example wol-service/.env
 ```
 
 | Variable | Where | Description |
 |---|---|---|
-| `JWT_SECRET` | server, wol-service | Secret key for signing JWTs. **Must match** in all services. |
+| `JWT_SECRET` | server | Secret key for signing JWTs. |
 | `API_KEY` | server, agent, lambda | Shared API key for obtaining JWTs. |
-| `PORT` | server, wol-service | HTTP port to listen on. |
+| `PORT` | server | HTTP port to listen on. |
 | `SERVER_URL` | agent | WebSocket URL of the backend server. |
 | `SERVER_HTTP_URL` | agent | HTTP URL of the backend server. |
 | `DEVICE_ID` | agent | Unique identifier for this PC. |
 | `DEVICE_NAME` | agent | Human-friendly device name shown in Alexa. |
-| `WOL_SERVICE_URL` | lambda | HTTP URL of the WoL service. |
-| `DEFAULT_DEVICE_ID` | lambda | Default device to control when no name is spoken. |
-| `DEFAULT_MAC` | lambda | MAC address of the default device for WoL. |
+| `SERVER_URL` | lambda | HTTP URL of the backend server (for shutdown calls). |
+| `API_KEY` | lambda | Must match the server's `API_KEY`. |
+| `DEVICES` | lambda | JSON array of device definitions (see below). |
+| `DEFAULT_DEVICE_ID` | lambda | Fallback device ID when `DEVICES` is not set. |
+| `DEFAULT_DEVICE_NAME` | lambda | Fallback device friendly name. |
+| `DEFAULT_MAC` | lambda | Fallback MAC address for WoL. |
 
-> ⚠️ **Security**: Change `JWT_SECRET` and `API_KEY` to strong random values before deploying to production. Never commit `.env` files.
+> ⚠️ **Security**: Change `JWT_SECRET` and `API_KEY` to strong random values before deploying. Never commit `.env` files.
+
+### Lambda `DEVICES` format
+
+```json
+[
+  {
+    "deviceId": "my-pc",
+    "friendlyName": "My PC",
+    "macAddress": "AA:BB:CC:DD:EE:FF",
+    "description": "Gaming PC in the living room"
+  }
+]
+```
+
+The `macAddress` is registered in the `Alexa.WakeOnLANController` capability. When
+you say *"Alexa, turn on My PC"*, the Echo device on your LAN reads this MAC address
+and sends the UDP WoL magic packet **directly** — your backend is not involved.
 
 ---
 
-## 3. Start the backend services with Docker Compose
+## 3. Start the backend server with Docker Compose
 
 ```bash
 # Create a .env file in the project root with your secrets
@@ -56,11 +76,10 @@ EOF
 docker-compose up -d
 ```
 
-Verify the services are healthy:
+Verify the server is healthy:
 
 ```bash
 curl http://localhost:3000/health   # → {"status":"ok"}
-curl http://localhost:3001/health   # → {"status":"ok"}
 ```
 
 ---
@@ -113,38 +132,63 @@ sudo systemctl enable --now alexa-pc-agent
 
 ---
 
-## 5. Deploy the Alexa Skill
+## 5. Deploy the Alexa Skill (Smart Home)
 
-### 5a. Create the Lambda function
+The skill uses the **Smart Home Skill API** with the `Alexa.WakeOnLANController`
+interface. No custom interaction model is needed — Alexa's built-in phrases handle
+everything.
+
+### 5a. Set up account linking (required for Smart Home skills)
+
+Smart Home skills require OAuth 2.0 account linking. For a self-hosted setup:
+1. Use an OAuth provider such as [Auth0](https://auth0.com) (free tier available) or
+   implement a simple OAuth server.
+2. In the Alexa Developer Console → **Account Linking**, configure the authorization
+   and token endpoints.
+3. In your Lambda, the `AcceptGrant` handler receives the grant code — you can store
+   or exchange it here if needed.
+
+### 5b. Create the Lambda function
 
 1. Go to the [AWS Lambda console](https://console.aws.amazon.com/lambda).
 2. Create a new function (Node.js 20.x runtime).
 3. Set the following environment variables:
    * `SERVER_URL` – e.g. `https://your-server.example.com`
-   * `WOL_SERVICE_URL` – e.g. `https://your-wol.example.com`
    * `API_KEY` – must match the server's `API_KEY`
-   * `DEFAULT_DEVICE_ID` – e.g. `my-pc`
-   * `DEFAULT_MAC` – e.g. `AA:BB:CC:DD:EE:FF`
+   * `DEVICES` – JSON array of device definitions (see §2 above)
 4. Package and upload the Lambda:
 
 ```bash
 cd alexa-skill/lambda
 npm install --omit=dev
 zip -r lambda.zip index.js package.json node_modules
-# Upload lambda.zip via the AWS console or CLI
-aws lambda update-function-code --function-name alexa-pc-control --zip-file fileb://lambda.zip
+# Upload via the AWS console or CLI
+aws lambda update-function-code \
+  --function-name alexa-pc-control \
+  --zip-file fileb://lambda.zip
 ```
 
-### 5b. Create the Alexa Skill
+5. Add a **resource-based policy** to allow the Alexa Smart Home service to invoke
+   your function:
+
+```bash
+aws lambda add-permission \
+  --function-name alexa-pc-control \
+  --statement-id alexa-smart-home \
+  --action lambda:InvokeFunction \
+  --principal alexa-connectedhome.amazon.com \
+  --event-source-token YOUR_SKILL_ID
+```
+
+### 5c. Create the Alexa Skill
 
 1. Go to the [Alexa Developer Console](https://developer.amazon.com/alexa/console/ask).
-2. Create a new **Custom** skill.
-3. Choose **Alexa-hosted (Node.js)** or **Provision your own** endpoint pointing to your Lambda ARN.
-4. In **Interaction Model** → **JSON Editor**, paste the content of:
-   * `alexa-skill/interactionModel/en-US.json` for English
-   * `alexa-skill/interactionModel/es-ES.json` for Spanish
-5. Save and **Build** the model.
-6. Test in the **Test** tab: *"Alexa, ask PC Control to shut down my computer"*.
+2. Create a new **Smart Home** skill.
+3. Under **Smart Home service endpoint**, enter your Lambda ARN.
+4. Configure **Account Linking** as described in §5a.
+5. Enable the skill in the Alexa app on your phone.
+6. Discover devices: *"Alexa, discover my devices"*.
+7. Test: *"Alexa, turn on My PC"* (WoL) and *"Alexa, turn off My PC"* (shutdown).
 
 ---
 
@@ -159,17 +203,11 @@ TOKEN=$(curl -s -X POST http://localhost:3000/api/auth/token \
 # List connected devices
 curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/api/devices
 
-# Send a ping to a device
+# Send a shutdown command directly
 curl -s -X POST http://localhost:3000/api/commands/my-pc \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
-  -d '{"command":"ping"}'
-
-# Send a WoL magic packet
-curl -s -X POST http://localhost:3001/wake \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"mac":"AA:BB:CC:DD:EE:FF"}'
+  -d '{"command":"shutdown"}'
 ```
 
 ---
@@ -178,9 +216,11 @@ curl -s -X POST http://localhost:3001/wake \
 
 * Put the server behind a reverse proxy (nginx / Caddy) with a TLS certificate.
 * Use strong, randomly generated `JWT_SECRET` and `API_KEY` values.
-* Enable firewall rules to restrict access to ports 3000/3001.
+* Enable firewall rules to restrict access to port 3000.
 * Rotate `API_KEY` periodically and update it in the Lambda environment variables.
 * Consider using [Amazon Secrets Manager](https://aws.amazon.com/secrets-manager/) for the Lambda secrets.
+* Ensure your Echo device and target PC are on the same LAN subnet for WoL to work.
+* Enable Wake-on-LAN in your PC's BIOS/UEFI settings.
 
 ---
 
@@ -191,8 +231,6 @@ curl -s -X POST http://localhost:3001/wake \
 cd server && npm install && npm test
 
 # Agent
-cd ../agent && npm install && npm test
-
-# WoL service
-cd ../wol-service && npm install && npm test
+cd agent && npm install && npm test
 ```
+
