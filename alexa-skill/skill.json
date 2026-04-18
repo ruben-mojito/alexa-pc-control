@@ -1,0 +1,66 @@
+{
+  "manifest": {
+    "publishingInformation": {
+      "locales": {
+        "en-US": {
+          "name": "PC Control",
+          "summary": "Control your PC with Alexa – wake up or shut down your computer.",
+          "description": "Use voice commands to power on or shut down your PC remotely. Requires the Alexa PC Control backend running on your network.",
+          "examplePhrases": [
+            "Alexa, ask PC Control to shut down my computer",
+            "Alexa, ask PC Control to turn on my PC",
+            "Alexa, ask PC Control to reboot"
+          ],
+          "keywords": ["pc", "computer", "shutdown", "wake on lan", "control"],
+          "smallIconUri": "",
+          "largeIconUri": ""
+        },
+        "es-ES": {
+          "name": "Control PC",
+          "summary": "Controla tu PC con Alexa – enciéndelo o apágalo con tu voz.",
+          "description": "Usa comandos de voz para encender o apagar tu ordenador de forma remota. Requiere el backend de Alexa PC Control funcionando en tu red.",
+          "examplePhrases": [
+            "Alexa, dile a Control PC que apague el ordenador",
+            "Alexa, dile a Control PC que encienda el PC",
+            "Alexa, dile a Control PC que reinicie"
+          ],
+          "keywords": ["pc", "ordenador", "apagar", "encender", "wake on lan", "control"],
+          "smallIconUri": "",
+          "largeIconUri": ""
+        }
+      },
+      "isAvailableWorldwide": true,
+      "testingInstructions": "Enable the skill and say 'Alexa, ask PC Control to shut down my computer'.",
+      "category": "SMART_HOME",
+      "distributionCountries": []
+    },
+    "apis": {
+      "smartHome": {
+        "endpoint": {
+          "uri": "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:alexa-pc-control"
+        },
+        "regions": {
+          "NA": {
+            "endpoint": {
+              "uri": "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:alexa-pc-control"
+            }
+          },
+          "EU": {
+            "endpoint": {
+              "uri": "arn:aws:lambda:eu-west-1:ACCOUNT_ID:function:alexa-pc-control"
+            }
+          }
+        }
+      }
+    },
+    "manifestVersion": "1.0",
+    "permissions": [],
+    "privacyAndCompliance": {
+      "allowsPurchases": false,
+      "usesPersonalInfo": false,
+      "isChildDirected": false,
+      "isExportCompliant": true,
+      "containsAds": false
+    }
+  }
+}

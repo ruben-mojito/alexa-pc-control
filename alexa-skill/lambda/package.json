@@ -1,0 +1,21 @@
+{
+  "name": "alexa-pc-control-lambda",
+  "version": "2.0.0",
+  "description": "Alexa PC Control – Smart Home Skill Lambda handler (WakeOnLANController)",
+  "main": "index.js",
+  "scripts": {
+    "package": "zip -r lambda.zip index.js node_modules package.json",
+    "test": "jest --forceExit --runInBand"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}
