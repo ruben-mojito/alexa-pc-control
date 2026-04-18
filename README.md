@@ -46,7 +46,9 @@ See [docs/architecture.md](docs/architecture.md) for full details.
 alexa-pc-control/
 ├── server/           # Node.js backend (Express + WebSockets + JWT)
 ├── agent/            # Node.js PC agent (WebSocket client)
-├── alexa-skill/      # Smart Home Skill manifest + Lambda handler
+├── alexa-skill/      # Smart Home Skill manifests + handlers
+│   ├── lambda/       #   AWS Lambda handler + skill manifest (skill.json)
+│   └── http-server/  #   Docker HTTP server handler + skill manifest (skill.json)
 ├── docs/             # Architecture and setup guides
 ├── docker-compose.yml
 ├── CONTRIBUTING.md

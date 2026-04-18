@@ -195,10 +195,13 @@ aws lambda add-permission \
 
 #### 5c-A. Create the Alexa Skill (Lambda endpoint)
 
+The skill manifest for this option is at `alexa-skill/lambda/skill.json`. Replace
+`ACCOUNT_ID` with your AWS account ID before using it.
+
 1. Go to the [Alexa Developer Console](https://developer.amazon.com/alexa/console/ask).
 2. Create a new **Smart Home** skill.
 3. Under **Smart Home service endpoint**, select **AWS Lambda ARN** and enter your
-   Lambda ARN.
+   Lambda ARN (e.g. `arn:aws:lambda:us-east-1:ACCOUNT_ID:function:alexa-pc-control`).
 4. Configure **Account Linking** as described in §5a.
 5. Enable the skill in the Alexa app on your phone.
 6. Discover devices: *"Alexa, discover my devices"*.
@@ -253,6 +256,10 @@ server {
 ```
 
 #### 5d-B. Create the Alexa Skill (HTTPS endpoint)
+
+The skill manifest for this option is at `alexa-skill/http-server/skill.json`. Replace
+`https://alexa.your-server.example.com/skill` with your actual public HTTPS URL before
+using it.
 
 1. Go to the [Alexa Developer Console](https://developer.amazon.com/alexa/console/ask).
 2. Create a new **Smart Home** skill.
