@@ -15,7 +15,7 @@ Thank you for considering contributing to **Alexa PC Control**! All contribution
    # or
    cd agent && npm install
    # or
-   cd wol-service && npm install
+   cd alexa-skill/lambda && npm install
    ```
 
 4. Make your changes, following the code style described below.
